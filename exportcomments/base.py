@@ -30,13 +30,15 @@ class ModelEndpointSet(object):
         return url
 
     def get_list_url(self, action=None, query_string=None):
-        url = '{}/exports/me'.format(self.base_url)
+        url = '{}/jobs'.format(self.base_url)
         return self._add_action_or_query_string(url, action, query_string)
 
-    def get_detail_url(self, query_string=None):
-        url = '{}/export'.format(self.base_url)
-        return self._add_action_or_query_string(url, None, query_string)
+    def get_detail_url(self, guid, action=None, query_string=None):
+        url = '{}/job/{}'.format(self.base_url, guid)
+        return self._add_action_or_query_string(url, action, query_string)
 
+    def get_create_url(self):
+        return '{}/job'.format(self.base_url)
 
     def make_request(self, method, url, data=None, retry_if_throttled=True, params=None):
         if data is not None:

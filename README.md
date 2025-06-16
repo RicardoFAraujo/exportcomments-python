@@ -1,7 +1,6 @@
-
 # ExportComments API for Python
 
-This is the official Python client for the ExportComments API, designed to facilitate the integration of advanced language processing capabilities into Python applications. Utilize this client to efficiently build and manage machine learning models for natural language processing directly from your Python environment.
+This is the official Python client for the ExportComments API v3, designed to facilitate the integration of advanced language processing capabilities into Python applications. Utilize this client to efficiently build and manage machine learning models for natural language processing directly from your Python environment.
 
 ## Installation
 
@@ -16,6 +15,7 @@ Alternatively, if you prefer to install from source or want to contribute to the
 ```bash
 git clone https://github.com/exportcomments/exportcomments-python.git
 cd exportcomments-python
+pip install -r requirements.txt
 python setup.py install
 ```
 
@@ -33,23 +33,64 @@ ex = ExportComments('<YOUR API TOKEN HERE>')
 Start an export process by submitting a URL to the API. This places the URL in the processing queue. Please note, the queue is limited to 5 concurrent requests.
 
 ```python
-response = ex.exports.create(
-    url='https://www.instagram.com/p/1234567', replies='false', twitterType=None
+response = ex.jobs.create(
+    url='https://www.instagram.com/p/1234567',
+    options={'replies': True, 'limit': 100}
 )
 ```
 
 To monitor the status of your export, retrieve the GUID from the initial response and query the export's status.
 
 ```python
-guid = response.body['data']['guid']
-response = ex.exports.check(guid=guid)
+guid = response.body['guid']
+response = ex.jobs.check(guid=guid)
 ```
 
 The status of the export can be checked as follows, with potential statuses including "queueing", "error", "done", or "progress":
 
 ```python
-# Note: The status is nested within a dictionary
-status = response.body['data'][0]['status']
+status = response.body['status']
+```
+
+### Listing Your Jobs
+
+You can list your existing jobs with pagination:
+
+```python
+response = ex.jobs.list(page=1, limit=10)
+jobs = response.body
+```
+
+### Job Options
+
+The new API supports various options that can be passed when creating a job:
+
+```python
+response = ex.jobs.create(
+    url='https://www.instagram.com/p/1234567',
+    options={
+        'replies': True,
+        'limit': 500,
+        'minTimestamp': 1622505600,
+        'maxTimestamp': 1625097600,
+        'vpn': 'Norway',
+        'cookies': {
+            'sessionid': 'your_session_id'
+        }
+    }
+)
+```
+
+### Backward Compatibility
+
+For backward compatibility, you can still use `ex.exports` which will work the same as `ex.jobs`:
+
+```python
+# This still works for backward compatibility
+response = ex.exports.create(
+    url='https://www.instagram.com/p/1234567',
+    options={'replies': True}
+)
 ```
 
 ### Handling Errors
@@ -60,7 +101,10 @@ The API might raise exceptions during endpoint calls. Below is an example of how
 from exportcomments.exceptions import ExportCommentsException
 
 try:
-    response = ex.exports.create(url='https://www.instagram.com/p/1234567', replies='false', twitterType=None)
+    response = ex.jobs.create(
+        url='https://www.instagram.com/p/1234567',
+        options={'replies': True}
+    )
 except ExportCommentsException as e:
     # Handles all exceptions derived from ExportCommentsException
     print(e)
@@ -82,18 +126,18 @@ You can download the resulting Excel file by using requests.get. Here's a good e
 import requests
 import pkg_resources
 
-# downloadUrl is retrieved from the .check method (If it is from .create() you don't need "[0]")
-download_url = response.body['data'][0]['downloadUrl']
+# download_link is retrieved from the .check method
+download_link = response.body['download_link']
 
-# Set headers for download (might not be necesary, but just add it in case)
+# Set headers for download
 headers = {
-    'Authorization': "Your API Token",
+    'X-AUTH-TOKEN': "Your API Token",
     'Content-Type': 'application/json',
     'User-Agent': 'python-sdk-{}'.format(pkg_resources.get_distribution('exportcomments').version),
 }
 
 # Get the excel
-response = requests.get("https://exportcomments.com/" + download_url, headers=headers)
+response = requests.get(download_link, headers=headers)
 
 # Handle the excel if it is available
 if response.status_code == 200:
@@ -101,12 +145,25 @@ if response.status_code == 200:
     with open("result.xlsx", "wb") as output:
         output.write(response.content)
 
-    print(f"[SUCCESSFUL DOWNLOAD] File Downloaded: {download_url}")
+    print(f"[SUCCESSFUL DOWNLOAD] File Downloaded: {download_link}")
 else:
     print(f"[FAILED TO DOWNLOAD] Status Code: {response.status_code}")
 ```
 
-## Code exaple
+## Development
+
+If you want to contribute to this project, install the development dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run tests:
+```bash
+pytest
+```
+
+## Code example
 Here's a comprehensive example demonstrating a typical workflow when only using 1 URL:
 ```python
 import requests
@@ -119,8 +176,8 @@ ex = ExportComments('<YOUR API TOKEN HERE>')
 
 def get_response(guid):
     while True:
-        response = ex.exports.check(guid=guid)
-        status = response.body['data'][0]['status']
+        response = ex.jobs.check(guid=guid)
+        status = response.body['status']
 
         if status == 'done':
             break
@@ -130,31 +187,43 @@ def get_response(guid):
 
         time.sleep(20)
 
-    download_url = response.body['data'][0]['downloadUrl']
+    download_link = response.body['download_link']
     headers = {
-        'Authorization': "Your API Token",
+        'X-AUTH-TOKEN': "Your API Token",
         'Content-Type': 'application/json',
         'User-Agent': 'python-sdk-{}'.format(pkg_resources.get_distribution('exportcomments').version),
     }
 
-    response = requests.get("https://exportcomments.com/" + download_url, headers=headers)
+    response = requests.get(download_link, headers=headers)
 
     if response.status_code == 200:
         with open("result.xlsx", "wb") as output:
             output.write(response.content)
-        print(f"[SUCCESSFUL DOWNLOAD] File Downloaded: {download_url}")
+        print(f"[SUCCESSFUL DOWNLOAD] File Downloaded: {download_link}")
     else:
         print(f"[FAILED TO DOWNLOAD] Status Code: {response.status_code}")
 
 if __name__ == '__main__':
     try:
-        response = ex.exports.create(
-            url='https://www.instagram.com/p/1234567', replies='false', twitterType=None
+        response = ex.jobs.create(
+            url='https://www.instagram.com/p/1234567',
+            options={'replies': True, 'limit': 100}
         )
     except ExportCommentsException as e:
         print(e)
         sys.exit()
 
-    guid = response.body['data']['guid']
+    guid = response.body['guid']
     get_response(guid)
 ```
+
+## API v3 Changes
+
+This version (2.0.0) introduces breaking changes to support API v3:
+
+- **New method names**: Use `ex.jobs` instead of `ex.exports` (backward compatibility maintained)
+- **Updated parameters**: The `create()` method now uses an `options` parameter instead of individual parameters
+- **Response structure**: Responses now have a simplified structure with direct access to properties
+- **New endpoints**: Updated to use `/api/v3/` endpoints
+
+For more information about the API, visit [ExportComments API Documentation](https://exportcomments.com/api).

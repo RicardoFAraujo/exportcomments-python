@@ -11,8 +11,14 @@ import six
 ORDER_BY_FIELD_RE = re.compile(r'^-?[a-z_]+$')
 
 
-
+# NOTE: This function is deprecated in API v3 as order_by is no longer supported
+# Kept for backward compatibility
 def validate_order_by_param(order_by_param):
+    """
+    DEPRECATED: This function is deprecated in API v3.
+    The new API v3 does not support order_by parameters.
+    This function is kept for backward compatibility only.
+    """
     def validate_order_by_field(order_by_field):
         if ',' in order_by_field:
             raise LocalParamValidationError(

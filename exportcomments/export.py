@@ -9,44 +9,28 @@ from exportcomments.validation import validate_order_by_param
 
 
 class Export(ModelEndpointSet):
-    model_type = 'exports'
+    model_type = 'jobs'
 
-    @property
-    def tags(self):
-        if not hasattr(self, '_tags'):
-            self._tags = Tags(self.token, self.base_url)
-        return self._tags
-
-    def list(self, page=None, per_page=None, order_by=None, retry_if_throttled=True):
-        if order_by is not None:
-            order_by = validate_order_by_param(order_by)
+    def list(self, page=None, limit=None, retry_if_throttled=True):
         query_string = self.remove_none_value(dict(
                                               page=page,
-                                              per_page=per_page,
-                                              order_by=order_by,
+                                              limit=limit,
                                               ))
         url = self.get_list_url(query_string=query_string)
         response = self.make_request('GET', url, retry_if_throttled=retry_if_throttled)
         return ExportCommentsResponse(response)
 
     def check(self, guid, retry_if_throttled=True):
-        data = self.remove_none_value({
-                                      'guid': guid
-                                      })
-        url = self.get_detail_url(data)
+        url = self.get_detail_url(guid)
         response = self.make_request('GET', url, retry_if_throttled=retry_if_throttled)
         return ExportCommentsResponse(response)
 
-   
-    def create(self, url, replies='false', twitterType=None, options=None, retry_if_throttled=True):
+    def create(self, url, options=None, retry_if_throttled=True):
         data = self.remove_none_value({
                                       'url': url,
-                                      'replies': replies,
-                                      'twitterType': twitterType,
                                       'options': options
                                       })
-        url = self.get_detail_url(data)
-        response = self.make_request('PUT', url, retry_if_throttled=retry_if_throttled)
+        create_url = self.get_create_url()
+        response = self.make_request('POST', create_url, data=data, retry_if_throttled=retry_if_throttled)
         return ExportCommentsResponse(response)
 
-    

@@ -12,7 +12,12 @@ class ExportComments(object):
         self.base_url = base_url
 
     @property
+    def jobs(self):
+        if not hasattr(self, '_jobs'):
+            self._jobs = Export(token=self.token, base_url=self.base_url)
+        return self._jobs
+
+    # Keep backward compatibility
+    @property
     def exports(self):
-        if not hasattr(self, '_exports'):
-            self._exports = Export(token=self.token, base_url=self.base_url)
-        return self._exports
+        return self.jobs
