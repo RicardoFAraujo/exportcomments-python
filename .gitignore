@@ -6,3 +6,4 @@
 /build/
 README.html
 test.py
+.env
